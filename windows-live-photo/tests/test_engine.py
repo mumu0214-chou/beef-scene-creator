@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from PIL import Image
-from engine import make_image, make_video, video_duration, run, ProcessingError
+from engine import make_image, make_video, video_duration, run, ProcessingError, transforms, handheld_sample
 from pair_metadata import read_boxes
 
 class ConversionTest(unittest.TestCase):
@@ -12,7 +12,7 @@ class ConversionTest(unittest.TestCase):
             root=Path(d)
             image=root/'source.png'
             Image.new('RGB',(600,800),(180,40,30)).save(image)
-            for direction in (True,False):
+            for direction in (True,False,'handheld'):
                 heic=root/f'{direction}.HEIC'; movie=root/f'{direction}.MOV'
                 make_image(image,heic,movie,.65,.4,direction)
                 self.check_pair(heic,movie)
@@ -27,6 +27,17 @@ class ConversionTest(unittest.TestCase):
             self.assertIn(b'Audio:',info)
             with self.assertRaises(ProcessingError):
                 make_video(video,root/'bad.HEIC',root/'bad.MOV',.6,2)
+
+    def test_handheld_trajectory(self):
+        self.assertAlmostEqual(handheld_sample(0)[0],247)
+        self.assertAlmostEqual(handheld_sample(.12)[0],256+.38*__import__('math').sin(6*__import__('math').pi*.12)+.16*__import__('math').sin(10*__import__('math').pi*.12))
+        static=transforms(1200,1600,.65,0,'handheld')
+        moving=transforms(1200,1600,.65,1,'handheld')
+        self.assertEqual(len(moving),60)
+        self.assertEqual(static[0],static[30])
+        self.assertNotEqual(moving[0],moving[30])
+        self.assertAlmostEqual(moving[0][0],moving[0][4])
+        self.assertAlmostEqual(moving[0][1],-moving[0][3])
 
     def check_pair(self,heic,movie):
         with Image.open(heic) as im:

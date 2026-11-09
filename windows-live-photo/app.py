@@ -29,7 +29,7 @@ class Panel(ttk.Frame):
         out=ttk.Frame(left);out.grid(row=5,column=0,sticky='ew',pady=5);self.out_btn=ttk.Button(out,text='选择输出位置…',command=self.choose_output);self.out_btn.pack(side='left');self.outlabel=ttk.Label(out,text='未选择');self.outlabel.pack(side='left',padx=6,fill='x',expand=True)
         self.opts=ttk.Frame(left);self.opts.grid(row=6,column=0,sticky='ew',pady=3);self.opts.columnconfigure(1,weight=1)
         if kind=='image':
-            ttk.Label(self.opts,text='运动轨迹').grid(row=0,column=0,sticky='w');f=ttk.Frame(self.opts);f.grid(row=0,column=1,sticky='w');ttk.Radiobutton(f,text='单向左旋转',value='左旋转',variable=self.direction).pack(side='left');ttk.Radiobutton(f,text='单向右旋转',value='右旋转',variable=self.direction).pack(side='left')
+            ttk.Label(self.opts,text='运动轨迹').grid(row=0,column=0,sticky='w');f=ttk.Frame(self.opts);f.grid(row=0,column=1,sticky='w');ttk.Radiobutton(f,text='单向左旋转',value='左旋转',variable=self.direction).pack(side='left');ttk.Radiobutton(f,text='单向右旋转',value='右旋转',variable=self.direction).pack(side='left');ttk.Radiobutton(f,text='自然手持平移',value='自然手持平移',variable=self.direction).pack(side='left')
             ttk.Label(self.opts,textvariable=self.crop_label).grid(row=1,column=0,columnspan=2,sticky='w',pady=(7,0));ttk.Scale(self.opts,from_=.45,to=.95,variable=self.crop,command=self.scale_changed).grid(row=2,column=0,columnspan=2,sticky='ew')
             ttk.Label(self.opts,textvariable=self.amp_label).grid(row=3,column=0,columnspan=2,sticky='w',pady=(7,0));ttk.Scale(self.opts,from_=0,to=1.5,variable=self.amplitude,command=self.scale_changed).grid(row=4,column=0,columnspan=2,sticky='ew');self.scale_changed()
             hint='红框为中央静止取景；幅度过大、画面越界时需要调小。'
@@ -156,7 +156,7 @@ class Panel(ttk.Frame):
         if not self.items or not self.outdir:messagebox.showinfo('提示','请添加素材并选择输出位置。');return
         try:
             if self.kind=='image':
-                crop,amp=self.crop.get(),self.amplitude.get();left=self.direction.get()=='左旋转';settings=(crop,amp,left)
+                crop,amp=self.crop.get(),self.amplitude.get();preset=self.direction.get();motion='handheld' if preset=='自然手持平移' else preset=='左旋转';settings=(crop,amp,motion)
             else:
                 start,duration,cover=self.values()
                 if start<0 or not .5<=duration<=3 or (cover is not None and not 0<=cover<duration):raise ProcessingError('请检查起点、时长和封面时间')

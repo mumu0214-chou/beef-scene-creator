@@ -56,7 +56,31 @@ class Point:
     def __sub__(self,other):return Point(self.x-other.x,self.y-other.y)
     def __mul__(self,n):return Point(self.x*n,self.y*n)
 
-def transforms(w:int,h:int,crop:float,amp:float,left:bool):
+def handheld_sample(t:float):
+    # Original two-second handheld trajectory, in the reference image's pixels.
+    keys=[(0.00,247,181,45,25),(0.12,256,182,60,-45),(0.28,265,158,0,-100),(0.36,263,153,-25,-10),(0.56,237,121,-120,-80),(0.70,227,133,0,100),(0.85,234,158,70,180),(1.00,247,181,45,25)]
+    a,b=next((a,b) for a,b in zip(keys,keys[1:]) if a[0]<=t<b[0])
+    dt=b[0]-a[0];u=(t-a[0])/dt
+    h00=2*u**3-3*u*u+1;h10=u**3-2*u*u+u;h01=-2*u**3+3*u*u;h11=u**3-u*u
+    x=h00*a[1]+h10*dt*a[3]+h01*b[1]+h11*dt*b[3]+.38*math.sin(6*math.pi*t)+.16*math.sin(10*math.pi*t)
+    y=h00*a[2]+h10*dt*a[4]+h01*b[2]+h11*dt*b[4]+.25*math.sin(8*math.pi*t+.7)
+    angle=math.radians(.08*math.sin(2*math.pi*t+.5)+.045*math.sin(4*math.pi*t))
+    return x,y,angle
+
+def transforms(w:int,h:int,crop:float,amp:float,left:bool|str):
+    if left=='handheld':
+        samples=[handheld_sample(i/60) for i in range(60)]
+        cx=(min(x for x,y,a in samples)+max(x for x,y,a in samples))/2
+        cy=(min(y for x,y,a in samples)+max(y for x,y,a in samples))/2
+        fit=min(w,h*.75)*crop;scale=fit/1080;move_scale=fit/1020;out=[]
+        for x,y,angle in samples:
+            p=Point(w/2+(x-cx)*move_scale*amp,h/2+(y-cy)*move_scale*amp)
+            angle*=amp;a,b=scale*math.cos(angle),-scale*math.sin(angle);d,e=scale*math.sin(angle),scale*math.cos(angle);c=p.x-a*540-b*720;f=p.y-d*540-e*720
+            for ox,oy in ((0,0),(1080,0),(0,1440),(1080,1440)):
+                sx=a*ox+b*oy+c;sy=d*ox+e*oy+f
+                if sx<0 or sy<0 or sx>w or sy>h:raise ProcessingError('运动超出原图边缘，请缩小取景范围或运动幅度')
+            out.append((a,b,c,d,e,f))
+        return out
     obs=json.loads((HERE/'trajectory.json').read_text(encoding='utf-8'))['result'];t=[q['time']-obs[0]['time'] for q in obs]
     v=[Point(q['x']-obs[0]['x'],(q['y']-obs[0]['y'])*1440/1302) for q in obs]
     def interp(x):
